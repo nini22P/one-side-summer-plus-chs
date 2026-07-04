@@ -4,7 +4,7 @@ set -e
 
 ROOT_DIR=$(pwd)
 
-export PATH="$ROOT_DIR:$ROOT_DIR/bin:$ROOT_DIR/CriPakTools/Build:$PATH"
+export PATH="$ROOT_DIR:$ROOT_DIR/bin:$PATH"
 
 mkdir -p build build/DATA1/font
 

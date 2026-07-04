@@ -184,7 +184,7 @@ class ScriptTool:
                     continue
                 typ = row.get('type')
                 src = row.get('source', '')
-                ln  = int(row.get('line', 0))
+                ln  = int(row.get('line') or 0)
                 if typ == 'NAME':
                     name_map[row['original']] = tran
                 elif typ == 'TEXT':
@@ -212,7 +212,7 @@ class ScriptTool:
 
             new_lines = list(lines)
 
-            # <11>
+            # <11 名字>
             for i, line in enumerate(new_lines):
                 for orig_name, tran_name in name_map.items():
                     if orig_name not in line:
@@ -221,7 +221,7 @@ class ScriptTool:
                                   rf'\g<1>{tran_name}\g<2>', line)
                 new_lines[i] = line
 
-            # <12>, <95>, <78>
+            # <12 台词>, <95 章节>, <78 选择项>
             for i, line in enumerate(new_lines):
                 lineno = i + 1
 
