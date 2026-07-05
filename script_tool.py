@@ -3,8 +3,8 @@ from collections import OrderedDict
 
 NAME_PATTERN  = re.compile(r'<11\s(.+?)>')
 TEXT_PATTERN  = re.compile(r'<12\s(.+?)>')
-CHAP_PATTERN  = re.compile(r'<95\s(.+?)>')
-SEL_PATTERN   = re.compile(r'<78\s*,([^,>]*)')
+CHAPTER_PATTERN  = re.compile(r'<95\s(.+?)>')
+SELECT_PATTERN   = re.compile(r'<78\s*,([^,>]*)')
 TAG_PATTERN   = re.compile(r'<(\d+)')
 NONASCII      = re.compile(r'[^\x00-\x7F]')
 
@@ -93,14 +93,14 @@ class ScriptTool:
                     continue
 
                 # <95 章节>
-                ch = CHAP_PATTERN.search(line)
+                ch = CHAPTER_PATTERN.search(line)
                 if ch:
                     raw = ch.group(1).strip()
                     if raw:
                         rows.append(OrderedDict([
                             ('source', file_name),
                             ('line', lineno),
-                            ('type', 'CHAP'),
+                            ('type', 'CHAPTER'),
                             ('context', ''),
                             ('original', raw),
                             ('translation', ''),
@@ -108,14 +108,14 @@ class ScriptTool:
                     continue
 
                 # <78 选择项>
-                sel = SEL_PATTERN.search(line)
+                sel = SELECT_PATTERN.search(line)
                 if sel:
                     raw = sel.group(1).strip()
                     if raw:
                         rows.append(OrderedDict([
                             ('source', file_name),
                             ('line', lineno),
-                            ('type', 'SEL'),
+                            ('type', 'SELECT'),
                             ('context', speaker),
                             ('original', raw),
                             ('translation', ''),
@@ -189,9 +189,9 @@ class ScriptTool:
                     name_map[row['original']] = tran
                 elif typ == 'TEXT':
                     text_map[(src, ln)] = tran
-                elif typ == 'CHAP':
+                elif typ == 'CHAPTER':
                     chap_map[(src, ln)] = tran
-                elif typ == 'SEL':
+                elif typ == 'SELECT':
                     sel_map[(src, ln)] = tran
 
         os.makedirs(output_dir, exist_ok=True)
@@ -230,12 +230,12 @@ class ScriptTool:
                     new_lines[i] = TEXT_PATTERN.sub(
                         f'<12 {text_map[(file_name, lineno)]}>', line)
 
-                ch = CHAP_PATTERN.search(line)
+                ch = CHAPTER_PATTERN.search(line)
                 if ch and (file_name, lineno) in chap_map:
-                    new_lines[i] = CHAP_PATTERN.sub(
+                    new_lines[i] = CHAPTER_PATTERN.sub(
                         f'<95 {chap_map[(file_name, lineno)]}>', line)
 
-                sl = SEL_PATTERN.search(line)
+                sl = SELECT_PATTERN.search(line)
                 if sl and (file_name, lineno) in sel_map:
                     new_lines[i] = re.sub(
                         r'(<78\s*,)([^,>]*)([^>]*>)',
