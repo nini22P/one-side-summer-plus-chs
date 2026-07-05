@@ -19,9 +19,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description='Generate glyph texture image')
     parser.add_argument('-i', required=True, help='glyph_table.csv')
     parser.add_argument('-f', required=True, help='font file (TTF/OTF)')
-    parser.add_argument('-o', default='glyphs.png', help='output PNG')
-    parser.add_argument('--font-size', type=int, default=14,
-                        help='font size in pixels (default 14)')
+    parser.add_argument('-o', required=True, help='output PNG')
+    parser.add_argument('--font-size', type=int, required=True,
+                        help='font size in pixels')
+    parser.add_argument('--offset-y', type=int, default=0,
+                        help='vertical offset in pixels (positive=down)')
     args = parser.parse_args()
 
     rows = load_rows(args.i)
@@ -46,7 +48,7 @@ def main() -> None:
         x = (i % cols) * tile_w
         y = (i // cols) * tile_h
 
-        draw.text((x + tile_w / 2, y + tile_h / 2), ch, font=font, fill='white', anchor='mm')
+        draw.text((x + tile_w / 2, y + tile_h / 2 + args.offset_y), ch, font=font, fill='white', anchor='mm')
 
     img.save(args.o)
     print(f'[OK] {args.o} ({total} glyphs, {img_w}×{img_h})')

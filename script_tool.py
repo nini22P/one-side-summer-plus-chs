@@ -263,7 +263,7 @@ def main():
     p_wr.add_argument('-i', '--input',  required=True, help='original scripts dir')
     p_wr.add_argument('-o', '--output', required=True, help='output scripts dir')
     p_wr.add_argument('-c', '--csv',    required=True, help='translation CSV')
-    p_wr.add_argument('-r', '--replace-map', help='glyph_table.csv')
+    p_wr.add_argument('-g', '--glyph-table', help='glyph_table.csv')
 
     args = parser.parse_args()
     tool = ScriptTool()
@@ -271,7 +271,7 @@ def main():
     if args.mode == 'extract':
         tool.extract(args.input, args.output)
     else:
-        tool.write(args.input, args.output, args.csv, args.replace_map)
+        tool.write(args.input, args.output, args.csv, args.glyph_table)
 
 
 if __name__ == '__main__':

@@ -9,7 +9,7 @@ B_LEAD = range(0xE0, 0xF0)
 TRAIL1 = range(0x40, 0x7F)
 TRAIL2 = range(0x80, 0xFD)
 
-SKIP_FC = {5}
+SKIP_FONT_INDEX = {5}
 
 
 def valid_trail(b2: int) -> bool:
@@ -38,31 +38,31 @@ def iter_sjis(lead: range, base: int):
             yield code - base, code
 
 
-def build_existing(font_index: list[int]) -> list[OrderedDict]:
+def build_existing(font_indexs: list[int]) -> list[OrderedDict]:
     entries: list[tuple[int, int, int, str, str]] = []
 
-    for fc, code in iter_sjis(A_LEAD, A_BASE):
-        if fc >= FONT_INDEX_MAX or font_index[fc] == 0:
+    for font_index, code in iter_sjis(A_LEAD, A_BASE):
+        if font_index >= FONT_INDEX_MAX or font_indexs[font_index] == 0:
             continue
         ch = decode_sjis(code)
         if not ch:
             continue
-        entries.append((font_index[fc], fc, code, ch, ''))
+        entries.append((font_indexs[font_index], font_index, code, ch, ''))
 
-    for fc, code in iter_sjis(B_LEAD, B_BASE):
-        if fc >= FONT_INDEX_MAX or font_index[fc] == 0:
+    for font_index, code in iter_sjis(B_LEAD, B_BASE):
+        if font_index >= FONT_INDEX_MAX or font_indexs[font_index] == 0:
             continue
         ch = decode_sjis(code)
         if not ch:
             continue
-        entries.append((font_index[fc], fc, code, ch, ''))
+        entries.append((font_indexs[font_index], font_index, code, ch, ''))
 
     # tex_slot 0 = hardcoded full-width dot
     entries.append((0, 5, 0x8145, '・', 'hardcoded'))
     entries.sort(key=lambda r: r[0])
 
     rows: list[OrderedDict] = []
-    for slot, fc, code, ch, note in entries:
+    for slot, font_index, code, ch, note in entries:
         rows.append(OrderedDict([
             ('index', str(slot)),
             ('sjis', '0x%04X' % code),
@@ -74,7 +74,7 @@ def build_existing(font_index: list[int]) -> list[OrderedDict]:
     return rows
 
 
-def get_fc(sjis: int) -> int | None:
+def get_font_index(sjis: int) -> int | None:
     b1 = (sjis >> 8) & 0xFF
     if b1 in A_LEAD:
         return sjis - A_BASE
@@ -92,9 +92,9 @@ def main() -> None:
                         help='output CSV path')
     args = parser.parse_args()
 
-    font_index = read_font_index(args.font_index)
+    font_indexs = read_font_index(args.font_index)
 
-    existing = build_existing(font_index)
+    existing = build_existing(font_indexs)
     char_map = {r['char']: r for r in existing}
     max_slot = max(int(r['index']) for r in existing) if existing else -1
 
@@ -115,14 +115,14 @@ def main() -> None:
                     if ch not in char_map:
                         needed.add(ch)
 
-    to_add = sorted(ch for ch in needed if not can_render(ch, char_map, font_index))
+    to_add = sorted(ch for ch in needed if not can_render(ch, char_map, font_indexs))
 
     if not to_add:
         _write_csv(args.o, existing)
         print(args.o)
         return
 
-    used_fc: set[int] = {r['sjis'] for r in existing}
+    used_font_indexs: set[int] = {r['sjis'] for r in existing}
     next_slot = max_slot + 1
     new_rows: list[OrderedDict] = []
 
@@ -135,14 +135,14 @@ def main() -> None:
             b = ch.encode('shift_jis')
             if len(b) == 2:
                 code = (b[0] << 8) | b[1]
-                fc = get_fc(code)
-                if fc is not None and 0 <= fc < FONT_INDEX_MAX and font_index[fc] == 0:
+                font_index = get_font_index(code)
+                if font_index is not None and 0 <= font_index < FONT_INDEX_MAX and font_indexs[font_index] == 0:
                     native_code = code
         except UnicodeEncodeError:
             pass
 
-        if native_code is not None and native_code not in used_fc:
-            used_fc.add(native_code)
+        if native_code is not None and native_code not in used_font_indexs:
+            used_font_indexs.add(native_code)
             sjis_native_rows.append((ch, native_code, OrderedDict([
                 ('index', str(next_slot)),
                 ('sjis', '0x%04X' % native_code),
@@ -156,14 +156,14 @@ def main() -> None:
             carrier_chars.append(ch)
 
     unused_carriers: list[tuple[int, int, str]] = []
-    for fc, code in iter_sjis(A_LEAD, A_BASE):
-        if fc in SKIP_FC or fc >= FONT_INDEX_MAX or font_index[fc] != 0:
+    for font_index, code in iter_sjis(A_LEAD, A_BASE):
+        if font_index in SKIP_FONT_INDEX or font_index >= FONT_INDEX_MAX or font_indexs[font_index] != 0:
             continue
-        if code in used_fc:
+        if code in used_font_indexs:
             continue
         carrier = decode_sjis(code)
         if carrier:
-            unused_carriers.append((fc, code, carrier))
+            unused_carriers.append((font_index, code, carrier))
 
     if len(unused_carriers) < len(carrier_chars):
         print(f"ERROR: need {len(carrier_chars)} carriers, only {len(unused_carriers)} available")
@@ -171,8 +171,8 @@ def main() -> None:
 
     carrier_iter = iter(unused_carriers)
     for ch in carrier_chars:
-        fc, code, carrier = next(carrier_iter)
-        used_fc.add(code)
+        font_index, code, carrier = next(carrier_iter)
+        used_font_indexs.add(code)
         new_rows.append(OrderedDict([
             ('index', str(next_slot)),
             ('sjis', '0x%04X' % code),
@@ -192,7 +192,7 @@ def main() -> None:
     print(f"Saved -> {args.o}")
 
 
-def can_render(ch: str, char_map: dict, font_index: list[int]) -> bool:
+def can_render(ch: str, char_map: dict, font_indexs: list[int]) -> bool:
     if ch in char_map:
         return True
     try:
@@ -201,8 +201,8 @@ def can_render(ch: str, char_map: dict, font_index: list[int]) -> bool:
             return True
         if len(b) != 2:
             return False
-        fc = get_fc((b[0] << 8) | b[1])
-        return fc is not None and 0 <= fc < FONT_INDEX_MAX and font_index[fc] != 0
+        font_index = get_font_index((b[0] << 8) | b[1])
+        return font_index is not None and 0 <= font_index < FONT_INDEX_MAX and font_indexs[font_index] != 0
     except:
         return False
 
