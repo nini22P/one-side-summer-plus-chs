@@ -11,7 +11,11 @@ mkdir -p build build/DATA1/font
 if [ ! -d raw/iso ]; then
     echo "Extracting ISO..."
     7z x "raw/One Side Summer + (Japan) (v1.01).iso" -oraw/iso
-    # cp -r raw/iso build/iso
+fi
+
+if [ ! -f "build/One Side Summer + (Japan) (v1.01).iso" ]; then
+    echo "Copying ISO to build directory..."
+    cp -f "raw/One Side Summer + (Japan) (v1.01).iso" "build/One Side Summer + (Japan) (v1.01).iso"
 fi
 
 if [ ! -d raw/DATA1 ]; then
@@ -21,7 +25,7 @@ fi
 
 python gen_glyph_table.py -i script.csv,eboot.csv -f raw/DATA1/font/font_16_a.txt -o build/glyph_table.csv
 
-python patch_tool.py -b assets/EBOOT.BIN -c eboot.csv -e cp932 -g build/glyph_table.csv -o build/iso/PSP_GAME/SYSDIR/EBOOT.BIN
+python patch_tool.py -b assets/EBOOT.BIN -c eboot.csv -e cp932 -g build/glyph_table.csv -o build/EBOOT.BIN
 
 python patch_jis2ucs.py -i raw/DATA1/CCC/jis2ucs.bin -o build/DATA1/CCC/jis2ucs.bin -g build/glyph_table.csv
 
@@ -36,6 +40,10 @@ python ext_tool.py encode -i build/font_16_a0.png -o build/DATA1/font/font_16_a0
 cp -f build/DATA1/font/font_16_a0.ext build/DATA1/font/font_16_a1.ext
 cp -f build/DATA1/font/font_16_a0.ext build/DATA1/font/font_16_a2.ext
 
-CriPakTools.exe replace -i "raw/iso/PSP_GAME/USRDIR/data/DATA1.CPK" -d build/DATA1 -o "build/iso/PSP_GAME/USRDIR/data/DATA1.CPK"
+CriPakTools.exe replace -i "raw/iso/PSP_GAME/USRDIR/data/DATA1.CPK" -d build/DATA1 -o "build/DATA1.CPK"
+
+UMDReplaceK.exe "build/One Side Summer + (Japan) (v1.01).iso" \
+    "PSP_GAME/USRDIR/data/DATA1.CPK" "build/DATA1.CPK" \
+    "PSP_GAME/SYSDIR/EBOOT.BIN" "build/EBOOT.BIN" \
 
 echo "done"
