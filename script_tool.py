@@ -30,7 +30,7 @@ SKIP_TAGS = {
     '96',              # 设置
 }
 
-CSV_FIELDS    = ['source', 'line', 'type', 'context', 'original', 'translation']
+CSV_FIELDS    = ['source', 'line', 'type', 'context', 'text', 'translation']
 FILE_ENCODING = 'shift_jis'
 
 
@@ -66,15 +66,13 @@ class ScriptTool:
                 print(f"  SKIP {file_name}: {e}")
                 continue
 
-            speaker = ""
             for i, line in enumerate(lines):
                 lineno = i + 1
 
                 # <11 名字>
                 nm = NAME_PATTERN.search(line)
                 if nm:
-                    speaker = nm.group(1).strip()
-                    unique_names.add(speaker)
+                    unique_names.add(nm.group(1).strip())
                     continue
 
                 # <12 台词>
@@ -82,12 +80,17 @@ class ScriptTool:
                 if tx:
                     raw = tx.group(1).strip()
                     if raw:
+                        ctx = ""
+                        if i > 0:
+                            prev_nm = NAME_PATTERN.search(lines[i - 1])
+                            if prev_nm:
+                                ctx = prev_nm.group(1).strip()
                         rows.append(OrderedDict([
                             ('source', file_name),
                             ('line', lineno),
                             ('type', 'TEXT'),
-                            ('context', speaker),
-                            ('original', raw),
+                            ('context', ctx),
+                            ('text', raw),
                             ('translation', ''),
                         ]))
                     continue
@@ -102,7 +105,7 @@ class ScriptTool:
                             ('line', lineno),
                             ('type', 'CHAPTER'),
                             ('context', ''),
-                            ('original', raw),
+                            ('text', raw),
                             ('translation', ''),
                         ]))
                     continue
@@ -116,8 +119,8 @@ class ScriptTool:
                             ('source', file_name),
                             ('line', lineno),
                             ('type', 'SELECT'),
-                            ('context', speaker),
-                            ('original', raw),
+                            ('context', ''),
+                            ('text', raw),
                             ('translation', ''),
                         ]))
                     continue
@@ -136,7 +139,7 @@ class ScriptTool:
         for n in sorted(unique_names):
             name_rows.append(OrderedDict([
                 ('source', ''), ('line', ''), ('type', 'NAME'),
-                ('context', ''), ('original', n), ('translation', ''),
+                ('context', ''), ('text', n), ('translation', ''),
             ]))
 
         final = name_rows + rows
@@ -145,8 +148,7 @@ class ScriptTool:
             w.writeheader()
             w.writerows(final)
 
-        print(f"  {len(unique_names)} names, {len(rows)} text/chapter/sel lines")
-        print(f"  saved → {output_csv}")
+        print(f"Saved: {output_csv}")
 
 
     def write(self, input_dir: str, output_dir: str, csv_path: str,
@@ -186,7 +188,7 @@ class ScriptTool:
                 src = row.get('source', '')
                 ln  = int(row.get('line') or 0)
                 if typ == 'NAME':
-                    name_map[row['original']] = tran
+                    name_map[row['text']] = tran
                 elif typ == 'TEXT':
                     text_map[(src, ln)] = tran
                 elif typ == 'CHAPTER':
@@ -248,18 +250,18 @@ class ScriptTool:
             with open(dest_path, 'w', encoding=FILE_ENCODING) as f:
                 f.writelines(new_lines)
 
-        print(f"  done → {output_dir}")
+        print(f"Done: {output_dir}")
 
 
 def main():
     parser = argparse.ArgumentParser(description='One Side Summer Script Tool')
     sub = parser.add_subparsers(dest='mode', required=True)
 
-    p_ext = sub.add_parser('extract', help='extract text → CSV')
+    p_ext = sub.add_parser('extract', help='extract text to CSV')
     p_ext.add_argument('-i', '--input',  required=True)
     p_ext.add_argument('-o', '--output', required=True)
 
-    p_wr = sub.add_parser('write', help='write translations → scripts')
+    p_wr = sub.add_parser('write', help='write translations to scripts')
     p_wr.add_argument('-i', '--input',  required=True, help='original scripts dir')
     p_wr.add_argument('-o', '--output', required=True, help='output scripts dir')
     p_wr.add_argument('-c', '--csv',    required=True, help='translation CSV')
