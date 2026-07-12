@@ -9,8 +9,6 @@ B_LEAD = range(0xE0, 0xF0)
 TRAIL1 = range(0x40, 0x7F)
 TRAIL2 = range(0x80, 0xFD)
 
-SKIP_FONT_INDEX = {5}
-
 
 def valid_trail(b2: int) -> bool:
     return b2 in TRAIL1 or b2 in TRAIL2
@@ -155,9 +153,10 @@ def main() -> None:
         else:
             carrier_chars.append(ch)
 
+    MIN_CARRIER_INDEX = 1410
     unused_carriers: list[tuple[int, int, str]] = []
     for font_index, code in iter_sjis(A_LEAD, A_BASE):
-        if font_index in SKIP_FONT_INDEX or font_index >= FONT_INDEX_MAX or font_indexs[font_index] != 0:
+        if font_index < MIN_CARRIER_INDEX or font_index >= FONT_INDEX_MAX or font_indexs[font_index] != 0:
             continue
         if code in used_font_indexs:
             continue
