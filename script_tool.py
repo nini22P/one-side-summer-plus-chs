@@ -140,7 +140,7 @@ class ScriptTool:
             ]))
 
         final = name_rows + rows
-        with open(output_csv, 'w', newline='', encoding='utf-8-sig') as f:
+        with open(output_csv, 'w', newline='', encoding='utf-8') as f:
             w = csv.DictWriter(f, fieldnames=CSV_FIELDS)
             w.writeheader()
             w.writerows(final)
@@ -163,7 +163,7 @@ class ScriptTool:
                 print(f"ERROR: glyph table not found '{replace_map_path}'")
                 return
             raw: dict[str, str] = {}
-            with open(replace_map_path, 'r', encoding='utf-8-sig') as f:
+            with open(replace_map_path, 'r', encoding='utf-8') as f:
                 for row in csv.DictReader(f):
                     repl = (row.get('replace') or '').strip()
                     carrier = (row.get('char') or '').strip()
@@ -177,7 +177,7 @@ class ScriptTool:
         chap_map = {}
         sel_map  = {}
 
-        with open(csv_path, 'r', encoding='utf-8-sig') as f:
+        with open(csv_path, 'r', encoding='utf-8') as f:
             for row in csv.DictReader(f):
                 tran = (row.get('translation') or '').strip()
                 if not tran:

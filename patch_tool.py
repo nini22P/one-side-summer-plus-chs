@@ -9,7 +9,7 @@ def load_glyph_replacements(glyph_csv: str) -> dict[str, str]:
     reps: dict[str, str] = {}
     if not glyph_csv:
         return reps
-    with open(glyph_csv, 'r', encoding='utf-8-sig') as f:
+    with open(glyph_csv, 'r', encoding='utf-8') as f:
         for row in csv.DictReader(f):
             ch = row.get('char', '')
             rep = row.get('replace', '')

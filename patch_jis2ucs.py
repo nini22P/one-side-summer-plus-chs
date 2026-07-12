@@ -44,7 +44,7 @@ def main():
     print(f'jis2ucs.bin: {len(data)} bytes, {count} entries')
 
     rows = []
-    with open(args.glyph_table, 'r', encoding='utf-8-sig') as f:
+    with open(args.glyph_table, 'r', encoding='utf-8') as f:
         for row in csv.DictReader(f):
             rows.append(row)
 

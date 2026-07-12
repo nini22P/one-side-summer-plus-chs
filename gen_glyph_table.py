@@ -106,7 +106,7 @@ def main() -> None:
         csv_path = csv_path.strip()
         if not csv_path:
             continue
-        with open(csv_path, 'r', encoding='utf-8-sig') as f:
+        with open(csv_path, 'r', encoding='utf-8') as f:
             for row in csv.DictReader(f):
                 val = (row.get('translation') or '').strip()
                 for ch in val:
@@ -209,7 +209,7 @@ def can_render(ch: str, char_map: dict, font_indexs: list[int]) -> bool:
 
 def _write_csv(path, rows):
     fieldnames = ['index', 'sjis', 'ucs', 'char', 'replace', 'note']
-    with open(path, 'w', newline='', encoding='utf-8-sig') as f:
+    with open(path, 'w', newline='', encoding='utf-8') as f:
         w = csv.DictWriter(f, fieldnames=fieldnames)
         w.writeheader()
         w.writerows(rows)

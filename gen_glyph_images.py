@@ -4,7 +4,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 def load_rows(csv_path: str) -> list[dict]:
     rows: list[dict] = []
-    with open(csv_path, 'r', encoding='utf-8-sig') as f:
+    with open(csv_path, 'r', encoding='utf-8') as f:
         for row in csv.DictReader(f):
             idx_str = (row.get('index') or '').strip()
             if not idx_str:

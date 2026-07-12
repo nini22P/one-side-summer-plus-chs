@@ -26,7 +26,7 @@ def main() -> None:
     written = 0
     skipped = 0
 
-    with open(args.i, 'r', encoding='utf-8-sig') as f:
+    with open(args.i, 'r', encoding='utf-8') as f:
         for row in csv.DictReader(f):
             idx_str = (row.get('index') or '').strip()
             sjis_str = (row.get('sjis') or '').strip()
