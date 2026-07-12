@@ -1,6 +1,8 @@
-#!/bin/sh
+#!/bin/bash
 
-set -e
+set -euo pipefail
+
+pip install --user Pillow pngquant_py
 
 ROOT_DIR=$(pwd)
 
@@ -39,6 +41,8 @@ python ext_tool.py encode -i build/font_16_a0.png -o build/DATA1/font/font_16_a0
 
 cp -f build/DATA1/font/font_16_a0.ext build/DATA1/font/font_16_a1.ext
 cp -f build/DATA1/font/font_16_a0.ext build/DATA1/font/font_16_a2.ext
+
+# python pac_tool.py encode -i assets/visual/ -o build/DATA1/visual --orig raw/DATA1/visual
 
 CriPakTools.exe replace -i "raw/iso/PSP_GAME/USRDIR/data/DATA1.CPK" -d build/DATA1 -o "build/DATA1.CPK"
 
