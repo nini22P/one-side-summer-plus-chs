@@ -55,7 +55,7 @@ def decode(ext_path: str, png_path: str) -> None:
     pal_img.save(png_path)
 
     tiles = len(pixel_data) // 128
-    print(f'[OK] {png_path} ({width}×{img_height}, {tiles} tiles, {len(palette)}-color palette)')
+    print(f'Done: {png_path} ({width}×{img_height}, {tiles} tiles, {len(palette)}-color palette)')
 
 
 def encode(png_path: str, ext_path: str) -> None:
@@ -141,7 +141,7 @@ def encode(png_path: str, ext_path: str) -> None:
         f.write(pixel_data)
 
     tiles = len(pixel_data) // 128
-    print(f'[OK] {ext_path} ({width}×{img_height}, {tiles} tiles, {len(palette)}-color palette)')
+    print(f'Done: {ext_path} ({width}×{img_height}, {tiles} tiles, {len(palette)}-color palette)')
 
 
 def main() -> None:

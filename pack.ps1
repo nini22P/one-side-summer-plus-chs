@@ -111,8 +111,14 @@ function Run-Build(
     Exec "gen_glyph_images" { python -X utf8 tools\gen_glyph_images.py -i work\glyph_table.csv -f patch\NotoSansCJKsc-Medium.otf --font-size 16 --offset-y -1 -o work\font_16_a0.png }
     Exec "pngquant"         { pngquant.exe --ext .png --force 16 work\font_16_a0.png }
     Exec "ext_tool"         { python -X utf8 tools\ext_tool.py encode -i work\font_16_a0.png -o work\DATA1\font\font_16_a0.ext }
-    Copy-Item -Force work\DATA1\font\font_16_a0.ext work\DATA1\font\font_16_a1.ext
-    Copy-Item -Force work\DATA1\font\font_16_a0.ext work\DATA1\font\font_16_a2.ext
+    
+    Exec "gen_glyph_images" { python -X utf8 tools\gen_glyph_images.py -i work\glyph_table.csv -f patch\NotoSerifCJKsc-Medium.otf --font-size 16 --offset-y -1 -o work\font_16_a1.png }
+    Exec "pngquant"         { pngquant.exe --ext .png --force 16 work\font_16_a1.png }
+    Exec "ext_tool"         { python -X utf8 tools\ext_tool.py encode -i work\font_16_a1.png -o work\DATA1\font\font_16_a1.ext }
+
+    Exec "gen_glyph_images" { python -X utf8 tools\gen_glyph_images.py -i work\glyph_table.csv -f patch\ResourceHanRoundedCN-Medium.ttf --font-size 16 --offset-y -1 -o work\font_16_a2.png }
+    Exec "pngquant"         { pngquant.exe --ext .png --force 16 work\font_16_a2.png }
+    Exec "ext_tool"         { python -X utf8 tools\ext_tool.py encode -i work\font_16_a2.png -o work\DATA1\font\font_16_a2.ext }
 
     if (Test-Path "patch\visual") {
         Exec "pac_tool" { python -X utf8 tools\pac_tool.py encode -i patch\visual -o work\DATA1\visual --orig "$Data1Orig\visual" }

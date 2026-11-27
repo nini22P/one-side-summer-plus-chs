@@ -336,7 +336,7 @@ def decode(input_path: str, output_path: str, crop: bool) -> None:
     img = decode_image(data, meta, crop)
     os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
     img.save(output_path)
-    print(f'[OK] {os.path.abspath(input_path)} -> {os.path.abspath(output_path)} ({img.width}\u00d7{img.height})')
+    print(f'Done: {os.path.abspath(input_path)} -> {os.path.abspath(output_path)} ({img.width}\u00d7{img.height})')
 
 
 def encode(input_path: str, output_path: str, orig_path: str) -> None:
@@ -349,7 +349,7 @@ def encode(input_path: str, output_path: str, orig_path: str) -> None:
     os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
     with open(output_path, 'wb') as f:
         f.write(result)
-    print(f'[OK] {os.path.abspath(input_path)} -> {os.path.abspath(output_path)} ({meta["buf_w"]}\u00d7{meta["buf_h"]})')
+    print(f'Done: {os.path.abspath(input_path)} -> {os.path.abspath(output_path)} ({meta["buf_w"]}\u00d7{meta["buf_h"]})')
 
 
 def decode_path(input_path: str, output_path: str, crop: bool) -> None:

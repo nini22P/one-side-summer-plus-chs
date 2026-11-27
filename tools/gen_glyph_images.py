@@ -51,7 +51,7 @@ def main() -> None:
         draw.text((x + tile_w / 2, y + tile_h / 2 + args.offset_y), ch, font=font, fill='white', anchor='mm')
 
     img.save(args.o)
-    print(f'[OK] {args.o} ({total} glyphs, {img_w}×{img_h})')
+    print(f'Done: {args.o} ({total} glyphs, {img_w}×{img_h})')
 
 
 if __name__ == '__main__':

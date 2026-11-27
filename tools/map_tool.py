@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import codecs
 import csv
+from difflib import SequenceMatcher
 from pathlib import Path
 import re
 import struct
@@ -19,9 +20,26 @@ VOICE_CMD_RE = re.compile(r'^[^\s【「（]+?\s*voice="[^"]*"')
 RUBY_RE = re.compile(r"\[([^\[\]\s'=]+)'([^\[\]]+)\]")
 NEWLINE_TAG_RE = re.compile(r"\[r\]", re.IGNORECASE)
 TAG_RE = re.compile(r"\[[^\]]*\]")
+PROTECTED_TOKEN_RE = re.compile(r"(\[[^|\]]+\|[^\]]+\]|#n)")
+QUOTE_TRANS = str.maketrans({"“": "『", "”": "』", "‘": "『", "’": "』"})
 
 RUBY_OPEN = "\x01"
 RUBY_CLOSE = "\x02"
+
+
+def normalize_text(text: str) -> str:
+    """Normalize half-width ASCII alnum (outside [ruby|base] and #n) to full-width and curly quotes to 『』."""
+    def _conv(s: str) -> str:
+        s = s.translate(QUOTE_TRANS)
+        return "".join(
+            chr(ord(ch) + 0xFEE0)
+            if (0x30 <= ord(ch) <= 0x39 or 0x41 <= ord(ch) <= 0x5A or 0x61 <= ord(ch) <= 0x7A)
+            else ch
+            for ch in s
+        )
+
+    parts = PROTECTED_TOKEN_RE.split(text)
+    return "".join(p if PROTECTED_TOKEN_RE.fullmatch(p) else _conv(p) for p in parts)
 
 
 def decode_text_auto(raw: bytes, label: str = "<memory>") -> str:
@@ -215,14 +233,14 @@ def cmd_make_map(csv_path: Path, exe_path: Path, map_path: Path, strip_out: Path
         if st not in ks_by_stem:
             continue
         rel, toks = ks_by_stem[st]
-        ks_idx = 0
-        for row_idx, row in items:
-            tr = row["translation"]
-            for j in range(ks_idx, len(toks)):
-                if toks[j][1] == tr:
-                    mappings.append((row_idx, row["source"], row["line"], rel, toks[j][0]))
-                    ks_idx = j + 1
-                    break
+        psp_texts = [row["translation"] for _, row in items]
+        ks_texts = [normalize_text(txt) for _, txt in toks]
+        matcher = SequenceMatcher(None, psp_texts, ks_texts, autojunk=False)
+        for block in matcher.get_matching_blocks():
+            for offset in range(block.size):
+                row_idx, row = items[block.a + offset]
+                ks_line = toks[block.b + offset][0]
+                mappings.append((row_idx, row["source"], row["line"], rel, ks_line))
 
     mappings.sort(key=lambda x: x[0])
     map_path.parent.mkdir(parents=True, exist_ok=True)
@@ -251,7 +269,7 @@ def cmd_fill(csv_path: Path, map_path: Path, exe_path: Path, out_csv: Path) -> N
     ks_lookup: dict[tuple[str, int], str] = {}
     for _, (rel, content) in scripts.items():
         for ks_line, txt in tokenize_ks_with_lines(content):
-            ks_lookup[(rel, ks_line)] = txt
+            ks_lookup[(rel, ks_line)] = normalize_text(txt)
 
     psp_to_ks: dict[tuple[str, str], tuple[str, int]] = {}
     with map_path.open("r", encoding="utf-8", newline="") as f:

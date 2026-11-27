@@ -53,7 +53,7 @@ def main() -> None:
     with open(args.o, 'wb') as f:
         f.write(struct.pack(f'<{FONT_INDEX_SIZE}H', *entries))
 
-    print(f'[OK] {args.o} written')
+    print(f'Done: {args.o} written')
     print(f'  {written} entries written, {skipped} skipped')
     print(f'  Non-zero entries: {sum(1 for v in entries if v != 0)}')
 
