@@ -1,12 +1,24 @@
 import os, csv, re, glob, argparse, sys
 from collections import OrderedDict
 
-NAME_PATTERN  = re.compile(r'<11\s(.+?)>')
-TEXT_PATTERN  = re.compile(r'<12\s(.+?)>')
-CHAPTER_PATTERN  = re.compile(r'<95\s(.+?)>')
-SELECT_PATTERN   = re.compile(r'<78\s*,([^,>]*)')
-TAG_PATTERN   = re.compile(r'<(\d+)')
-NONASCII      = re.compile(r'[^\x00-\x7F]')
+NAME_PATTERN    = re.compile(r'<11\s(.+?)>')
+TEXT_PATTERN    = re.compile(r'<12\s(.+?)>')
+CHAPTER_PATTERN = re.compile(r'<95\s(.+?)>')
+SELECT_PATTERN  = re.compile(r'<78\s*,([^,>]*)')
+TAG_PATTERN     = re.compile(r'<(\d+)')
+NONASCII        = re.compile(r'[^\x00-\x7F]')
+RUBY_ENGINE_PAT = re.compile(r'\{ruby:([^&}]+)&([^}]+)\}')
+RUBY_CSV_PAT    = re.compile(r'\[([^|\]]+)\|([^\]]+)\]')
+
+
+def extract_ruby(text: str) -> str:
+    """Convert engine {ruby:正文&注音} to FVP-style [注音|正文]."""
+    return RUBY_ENGINE_PAT.sub(r'[\2|\1]', text)
+
+
+def restore_ruby(text: str) -> str:
+    """Convert FVP-style [注音|正文] back to engine {ruby:正文&注音}."""
+    return RUBY_CSV_PAT.sub(r'{ruby:\2&\1}', text)
 
 HANDLED_TAGS  = {'11', '12', '78', '95'}
 
@@ -21,7 +33,7 @@ SKIP_TAGS = {
     '50', '51',        # 音效 / 延迟
     '52', '53', '56',  # 条件流控制
     '54', '55',        # 表情 / 图层控制
-    '57',              # 语音（名字由 name_map 全局替换）
+    '57',              # 语音
     '70', '72', '73',  # 流程控制 / 条件判断
     '74', '75', '79',  # 流程控制 / else / end
     '76', '77',        # 脚本包含 / 标签 / 跳转
@@ -78,7 +90,7 @@ class ScriptTool:
                 # <12 台词>
                 tx = TEXT_PATTERN.search(line)
                 if tx:
-                    raw = tx.group(1).strip()
+                    raw = extract_ruby(tx.group(1).strip())
                     if raw:
                         ctx = ""
                         if i > 0:
@@ -98,7 +110,7 @@ class ScriptTool:
                 # <95 章节>
                 ch = CHAPTER_PATTERN.search(line)
                 if ch:
-                    raw = ch.group(1).strip()
+                    raw = extract_ruby(ch.group(1).strip())
                     if raw:
                         rows.append(OrderedDict([
                             ('source', file_name),
@@ -113,7 +125,7 @@ class ScriptTool:
                 # <78 选择项>
                 sel = SELECT_PATTERN.search(line)
                 if sel:
-                    raw = sel.group(1).strip()
+                    raw = extract_ruby(sel.group(1).strip())
                     if raw:
                         rows.append(OrderedDict([
                             ('source', file_name),
@@ -190,11 +202,11 @@ class ScriptTool:
                 if typ == 'NAME':
                     name_map[row['text']] = tran
                 elif typ == 'TEXT':
-                    text_map[(src, ln)] = tran
+                    text_map[(src, ln)] = restore_ruby(tran)
                 elif typ == 'CHAPTER':
-                    chap_map[(src, ln)] = tran
+                    chap_map[(src, ln)] = restore_ruby(tran)
                 elif typ == 'SELECT':
-                    sel_map[(src, ln)] = tran
+                    sel_map[(src, ln)] = restore_ruby(tran)
 
         os.makedirs(output_dir, exist_ok=True)
 
@@ -252,6 +264,32 @@ class ScriptTool:
 
         print(f"Done: {output_dir}")
 
+    def export_trans(self, csv_path: str, out_path: str) -> None:
+        with open(csv_path, 'r', encoding='utf-8', newline='') as f:
+            rows = list(csv.DictReader(f))
+        with open(out_path, 'w', encoding='utf-8', newline='') as f:
+            w = csv.writer(f, lineterminator='\n')
+            for r in rows:
+                w.writerow([r.get('translation', '')])
+        print(f"Exported {len(rows)} translations -> {out_path}")
+
+    def merge_trans(self, base_csv: str, trans_path: str, out_csv: str) -> None:
+        with open(base_csv, 'r', encoding='utf-8', newline='') as f:
+            reader = csv.DictReader(f)
+            fieldnames = list(reader.fieldnames or CSV_FIELDS)
+            rows = list(reader)
+        with open(trans_path, 'r', encoding='utf-8', newline='') as f:
+            trans = [r[0] if r else '' for r in csv.reader(f)]
+        if len(rows) != len(trans):
+            raise ValueError(f"Row count mismatch: base={len(rows)} vs trans={len(trans)}")
+        for row, t in zip(rows, trans):
+            row['translation'] = t
+        with open(out_csv, 'w', encoding='utf-8', newline='') as f:
+            w = csv.DictWriter(f, fieldnames=fieldnames, lineterminator='\n')
+            w.writeheader()
+            w.writerows(rows)
+        print(f"Merged {len(rows)} rows -> {out_csv}")
+
 
 def main():
     parser = argparse.ArgumentParser(description='One Side Summer Script Tool')
@@ -267,13 +305,26 @@ def main():
     p_wr.add_argument('-c', '--csv',    required=True, help='translation CSV')
     p_wr.add_argument('-g', '--glyph-table', help='glyph_table.csv')
 
+    p_et = sub.add_parser('export-trans', help='export translation column only')
+    p_et.add_argument('-c', '--csv',    required=True)
+    p_et.add_argument('-o', '--output', required=True)
+
+    p_mt = sub.add_parser('merge-trans', help='merge translation column into base CSV')
+    p_mt.add_argument('-i', '--input',  required=True)
+    p_mt.add_argument('-t', '--trans',  required=True)
+    p_mt.add_argument('-o', '--output', required=True)
+
     args = parser.parse_args()
     tool = ScriptTool()
 
     if args.mode == 'extract':
         tool.extract(args.input, args.output)
-    else:
+    elif args.mode == 'write':
         tool.write(args.input, args.output, args.csv, args.glyph_table)
+    elif args.mode == 'export-trans':
+        tool.export_trans(args.csv, args.output)
+    else:
+        tool.merge_trans(args.input, args.trans, args.output)
 
 
 if __name__ == '__main__':
