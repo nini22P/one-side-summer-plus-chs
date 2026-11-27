@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import codecs
 import csv
-from difflib import SequenceMatcher
 from pathlib import Path
 import re
 import struct
@@ -22,13 +21,15 @@ NEWLINE_TAG_RE = re.compile(r"\[r\]", re.IGNORECASE)
 TAG_RE = re.compile(r"\[[^\]]*\]")
 PROTECTED_TOKEN_RE = re.compile(r"(\[[^|\]]+\|[^\]]+\]|#n)")
 QUOTE_TRANS = str.maketrans({"“": "『", "”": "』", "‘": "『", "’": "』"})
+NOTE_RE = re.compile(r"[(（]\s*(翻译君注|译者注|译注|[ｓs]|注)\s*[：:]([^)）]*)[)）]?(」)?$")
+STRAIGHT_QUOTE_RE = re.compile(r'"([^"]*)"')
 
 RUBY_OPEN = "\x01"
 RUBY_CLOSE = "\x02"
 
 
 def normalize_text(text: str) -> str:
-    """Normalize half-width ASCII alnum (outside [ruby|base] and #n) to full-width and curly quotes to 『』."""
+    """Normalize half-width ASCII alnum (outside [ruby|base] and #n), quotes, and translator notes."""
     def _conv(s: str) -> str:
         s = s.translate(QUOTE_TRANS)
         return "".join(
@@ -39,7 +40,11 @@ def normalize_text(text: str) -> str:
         )
 
     parts = PROTECTED_TOKEN_RE.split(text)
-    return "".join(p if PROTECTED_TOKEN_RE.fullmatch(p) else _conv(p) for p in parts)
+    normalized = "".join(p if PROTECTED_TOKEN_RE.fullmatch(p) else _conv(p) for p in parts)
+    return NOTE_RE.sub(
+        lambda m: f"{m.group(3) or ''}（{m.group(1)}：{STRAIGHT_QUOTE_RE.sub(r'『\1』', m.group(2))}）",
+        normalized,
+    )
 
 
 def decode_text_auto(raw: bytes, label: str = "<memory>") -> str:
@@ -211,6 +216,54 @@ def tokenize_ks_with_lines(content: str) -> list[tuple[int, str]]:
     return tokens
 
 
+def weighted_lis_align(psp_texts: list[str], ks_texts: list[str]) -> list[tuple[int, int]]:
+    """Find maximum-weight strictly monotonic alignment between PSP and KS lines."""
+    ks_pos: dict[str, list[int]] = {}
+    for j, t in enumerate(ks_texts):
+        ks_pos.setdefault(t, []).append(j)
+
+    n_ks = len(ks_texts)
+    bit: list[tuple[int, int]] = [(0, -1)] * (n_ks + 1)
+    nodes: list[tuple[int, int, int]] = []
+
+    def query(idx: int) -> tuple[int, int]:
+        best = (0, -1)
+        while idx > 0:
+            if bit[idx][0] > best[0]:
+                best = bit[idx]
+            idx -= idx & -idx
+        return best
+
+    def update(idx: int, val: tuple[int, int]) -> None:
+        while idx <= n_ks:
+            if val[0] > bit[idx][0]:
+                bit[idx] = val
+            idx += idx & -idx
+
+    for i, t in enumerate(psp_texts):
+        js = ks_pos.get(t)
+        if not js:
+            continue
+        w = 100 + len(t)
+        updates: list[tuple[int, tuple[int, int]]] = []
+        for j in reversed(js):
+            prev_w, prev_id = query(j)
+            node_id = len(nodes)
+            nodes.append((i, j, prev_id))
+            updates.append((j + 1, (prev_w + w, node_id)))
+        for pos, val in updates:
+            update(pos, val)
+
+    _, cur = query(n_ks)
+    res: list[tuple[int, int]] = []
+    while cur != -1:
+        i, j, prev_id = nodes[cur]
+        res.append((i, j))
+        cur = prev_id
+    res.reverse()
+    return res
+
+
 def cmd_make_map(csv_path: Path, exe_path: Path, map_path: Path, strip_out: Path | None) -> None:
     scripts = load_cn_scripts(exe_path)
     ks_by_stem: dict[str, tuple[str, list[tuple[int, str]]]] = {}
@@ -235,12 +288,10 @@ def cmd_make_map(csv_path: Path, exe_path: Path, map_path: Path, strip_out: Path
         rel, toks = ks_by_stem[st]
         psp_texts = [row["translation"] for _, row in items]
         ks_texts = [normalize_text(txt) for _, txt in toks]
-        matcher = SequenceMatcher(None, psp_texts, ks_texts, autojunk=False)
-        for block in matcher.get_matching_blocks():
-            for offset in range(block.size):
-                row_idx, row = items[block.a + offset]
-                ks_line = toks[block.b + offset][0]
-                mappings.append((row_idx, row["source"], row["line"], rel, ks_line))
+        for a_idx, b_idx in weighted_lis_align(psp_texts, ks_texts):
+            row_idx, row = items[a_idx]
+            ks_line = toks[b_idx][0]
+            mappings.append((row_idx, row["source"], row["line"], rel, ks_line))
 
     mappings.sort(key=lambda x: x[0])
     map_path.parent.mkdir(parents=True, exist_ok=True)

@@ -39,16 +39,18 @@ def main() -> None:
     img_h = tile_h * math.ceil(total / cols)
 
     img = Image.new('RGBA', (img_w, img_h), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
 
     for i, row in enumerate(rows):
         ch = row['char']
         if not ch:
             continue
+        tile = Image.new('RGBA', (tile_w, tile_h), (0, 0, 0, 0))
+        tile_draw = ImageDraw.Draw(tile)
+        tile_draw.text((tile_w / 2, tile_h / 2 + args.offset_y), ch, font=font, fill='white', anchor='mm')
+
         x = (i % cols) * tile_w
         y = (i // cols) * tile_h
-
-        draw.text((x + tile_w / 2, y + tile_h / 2 + args.offset_y), ch, font=font, fill='white', anchor='mm')
+        img.paste(tile, (x, y))
 
     img.save(args.o)
     print(f'Done: {args.o} ({total} glyphs, {img_w}×{img_h})')

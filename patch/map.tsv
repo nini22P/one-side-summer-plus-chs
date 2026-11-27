@@ -6956,7 +6956,7 @@ psp_file	psp_line	ks_file	ks_line
 01_com_19_01.txt	1052	01_com_19_01.ks	910
 01_com_19_01.txt	1054	01_com_19_01.ks	912
 01_com_19_01.txt	1059	01_com_19_01.ks	917
-01_com_19_01.txt	1075	01_com_19_01.ks	1024
+01_com_19_01.txt	1075	01_com_19_01.ks	1049
 01_com_19_05.txt	18	01_com_19_05.ks	28
 01_com_19_05.txt	28	01_com_19_05.ks	32
 01_com_19_05.txt	59	01_com_19_05.ks	70
@@ -8088,7 +8088,8 @@ psp_file	psp_line	ks_file	ks_line
 01_com_23_01.txt	584	01_com_23_01.ks	520
 01_com_23_01.txt	589	01_com_23_01.ks	525
 01_com_23_01.txt	592	01_com_23_01.ks	526
-01_com_24_01.txt	55	01_com_24_01.ks	1845
+01_com_24_01.txt	91	01_com_24_01.ks	22
+01_com_24_01.txt	298	01_com_24_01.ks	1845
 02_com_29_01.txt	17	02_com_29_01.ks	21
 02_com_29_01.txt	19	02_com_29_01.ks	23
 02_com_29_01.txt	21	02_com_29_01.ks	24
